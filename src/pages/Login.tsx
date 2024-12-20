@@ -1,19 +1,25 @@
 import axios from 'axios';
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom';
+import useAuth from '../context/useAuth';
 
 interface LoginData {
-    username: string;
+    usernameOrEmail: string;
     password: string;
+    userId: string;
 }
 
 const Login: React.FC = () => {
     const [formData, setFormData] = useState<LoginData>({
-        username: "",
+        usernameOrEmail: "",
         password: "",
+        userId: ""
     })
     const [error,setError]=useState<string>("");
     const navigate=useNavigate();
+    const{login}=useAuth();
+    const [loading, setLoading] = useState(false);
+
     const handleChange=(e:React.ChangeEvent<HTMLInputElement>)=>{
         const{name,value}=e.target;
         setFormData((prev)=>({...prev,[name]:value}));
@@ -23,15 +29,20 @@ const Login: React.FC = () => {
     const handleSubmit= async (e:React.FormEvent)=>{
       e.preventDefault();
       setError("");
+      setLoading(true);
+      const apiUrl = `${import.meta.env.VITE_AUTH_SERVICE_URL}`;
       try {
-        const response=await axios.post("url",formData);
-        const{token}=response.data;
+        const response=await axios.post(apiUrl+"/login",formData);
+        console.log(response)
+        const{token,id}=response.data;
         localStorage.setItem('authToken',token);
+        login(formData.usernameOrEmail,id,token);
         navigate('/home');
       } catch (error) {
-        setError('/home');
+        setError('Login Failed');
+      } finally{
+        setLoading(false);
       }
-      console.log(formData);
     }
     return (
         <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -43,8 +54,8 @@ const Login: React.FC = () => {
                         <input
                             type="text"
                             id="username"
-                            name="username"
-                            value={formData.username}
+                            name="usernameOrEmail"
+                            value={formData.usernameOrEmail}
                             onChange={handleChange}
                             required
                             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -67,8 +78,8 @@ const Login: React.FC = () => {
                         <button
                             type="submit"
                             className="w-full py-3 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none"
-                        >
-                            Sign In
+                            disabled={loading} >
+                            {loading ? "signing In...": "Sign In"}
                         </button>
                     </div>
                 </form>
